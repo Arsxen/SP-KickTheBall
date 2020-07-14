@@ -1,4 +1,6 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Collections;
+using System.Numerics;
 using UnityEngine;
 using Quaternion = UnityEngine.Quaternion;
 using Vector2 = UnityEngine.Vector2;
@@ -19,14 +21,22 @@ public class PlayerController : MonoBehaviour
 
     private bool _canMove = true;
 
+    private bool _canTurn = true;
+
     private static readonly int IsRunning = Animator.StringToHash("isRunning");
 
+    private WaitForFixedUpdate _waitForNextFixedUpdate;
+
+    private bool _isFlipped;
+
     // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
         _rgBody2D = GetComponent<Rigidbody2D>();
         _animator = GetComponent<Animator>();
         _ballFire = GetComponent<BallFire>();
+        _waitForNextFixedUpdate = new WaitForFixedUpdate();
+        _isFlipped = Math.Abs(transform.eulerAngles.y - 180.0f) < 10;
     }
 
     private void FixedUpdate()
@@ -36,29 +46,45 @@ public class PlayerController : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        if (!GameManager.Main.enabledCatching) return;
         if (!other.CompareTag("Ball")) return;
         DisableMovement();
-        GameManager.Main.Ball.StopBall();
-        GameManager.Main.Ball.TeleportBall(GetFeetPosition());
-        TurnCharacter(1);
+        StartCoroutine(SetUpBall());
         _ballFire.StartCharging();
+        GameManager.Main.DisableCatching();
     }
 
-    private void DisableMovement()
+    private IEnumerator SetUpBall()
+    {
+        GameManager.Main.Ball.StopBall();
+        GameManager.Main.Ball.TeleportBall(GetFeetPosition());
+        yield return _waitForNextFixedUpdate;
+        yield return _waitForNextFixedUpdate;
+        GameManager.Main.Ball.transform.parent = transform;
+    }
+
+    public void DisableMovement(bool canTurn = true)
     {
         _movementDirection = Vector2.zero;
         _canMove = false;
+        _canTurn = canTurn;
         _animator.SetBool(IsRunning, false);
     }
 
     public void EnableMovement()
     {
-        _canMove = true;
+        _canTurn = true;
+        _canMove = true;    
     }
 
     private Vector2 GetFeetPosition()
     {
-        return (Vector2) transform.position + feetOffset;
+        var newOffset = feetOffset;
+        if (_isFlipped)
+        {
+            newOffset.x *= -1;
+        }
+        return (Vector2) transform.position + newOffset;
     }
 
     private void TurnCharacter(float direction)
@@ -66,19 +92,27 @@ public class PlayerController : MonoBehaviour
         if (direction > 0)
         {
             transform.rotation = Quaternion.identity;
+            _isFlipped = false;
         }
         else if (direction < 0)
         {
             transform.rotation = Quaternion.Euler(0, 180, 0);
+            _isFlipped = true;
         }
     }
 
     public void Move(Vector2 direction)
     {
-        if (!_canMove) return;
-        _movementDirection = direction;
-        _animator.SetBool(IsRunning, direction != Vector2.zero);
-        TurnCharacter(direction.x);
+        if (_canMove)
+        {
+            _movementDirection = direction;
+            _animator.SetBool(IsRunning, direction != Vector2.zero);
+        }
+
+        if (_canTurn)
+        {
+            TurnCharacter(direction.x);
+        }
     }
 
 }

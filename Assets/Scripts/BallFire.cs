@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -56,20 +58,7 @@ public class BallFire : MonoBehaviour
         chargeBar.SetActive(IsCharging);
         _shootingArrow = transform.Find("ShootingArrow").transform;
         _shootingArrow.gameObject.SetActive(false);
-        _shootingArrow.rotation = Quaternion.AngleAxis(MinAngle, Vector3.forward);
         Angle = MinAngle;
-    }
-
-    // Update is called once per frame
-    private void Update()
-    {
-        if (!IsCharging) return;
-
-        // Power += powerStep * Input.GetAxisRaw("Horizontal");
-        // Angle += angleStep * Input.GetAxisRaw("Vertical");
-
-        UpdateChargeBar();
-        UpdateShootingAngle();
     }
 
     private void UpdateChargeBar()
@@ -80,7 +69,7 @@ public class BallFire : MonoBehaviour
 
     private void UpdateShootingAngle()
     {
-        _shootingArrow.rotation = Quaternion.AngleAxis(Angle, Vector3.forward);
+        _shootingArrow.rotation = Quaternion.Euler(0, _shootingArrow.rotation.eulerAngles.y, Angle);
     }
 
     public void StartCharging()
@@ -88,6 +77,8 @@ public class BallFire : MonoBehaviour
         _shootingArrow.gameObject.SetActive(true);
         chargeBar.SetActive(true);
         IsCharging = true;
+        UpdateChargeBar();
+        UpdateShootingAngle();
     }
 
     private void StopCharging()
@@ -102,7 +93,10 @@ public class BallFire : MonoBehaviour
         StopCharging();
         var force = Quaternion.AngleAxis(Angle, Vector3.forward) * Vector3.right;
         force *= Power;
+        force.x *= Math.Abs(transform.eulerAngles.y - 180.0f) < 10 ? -1 : 1;
+        GameManager.Main.Ball.transform.parent = null;
         GameManager.Main.Ball.ShootBall(force);
+        GameManager.Main.EnableCatching();
     }
 
     public IEnumerator AdjustPower(float direction)
@@ -110,6 +104,7 @@ public class BallFire : MonoBehaviour
         while (true)
         {
             Power += powerStep * Time.deltaTime * direction;
+            UpdateChargeBar();
             yield return null;
         }
     }
@@ -119,6 +114,7 @@ public class BallFire : MonoBehaviour
         while (true)
         {
             Angle += angleStep * Time.deltaTime * direction;
+            UpdateShootingAngle();
             yield return null;
         }
     }

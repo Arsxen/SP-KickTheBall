@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -8,23 +9,24 @@ public class BallController : MonoBehaviour
 
     [SerializeField] private Vector2 maxSpeed = new Vector2(10, 10);
 
-    private Rigidbody2D _rgBody;
+    public Rigidbody2D RgBody { get; private set; }
     
     // Start is called before the first frame update
-    void Start()
+    private void Awake()
     {
-        _rgBody = GetComponent<Rigidbody2D>();
-        ShootBallRandom();
+        RgBody = GetComponent<Rigidbody2D>();
     }
 
     public void ShootBall(Vector2 force)
     {
-        _rgBody.AddForce(force);
-        _rgBody.AddTorque(force.x);
+        RgBody.drag = 0;
+        RgBody.angularDrag = 0;
+        RgBody.AddForce(force);
+        RgBody.AddTorque(force.x);
     }
 
 
-    private void ShootBallRandom()
+    public void ShootBallRandom()
     {
         //Random Direction
         var direction = new Vector2Int(Random.Range(0, 2), Random.Range(0, 2));
@@ -41,23 +43,27 @@ public class BallController : MonoBehaviour
         ShootBall(ballVelocity);
     }
 
+    public void SlowBall()
+    {
+        RgBody.drag = 5;
+        RgBody.angularDrag = 3;
+    }
+
     public void StopBall()
     {
-        _rgBody.velocity = Vector2.zero;
-        _rgBody.angularVelocity = 0;
-        _rgBody.MoveRotation(0);
+        RgBody.Sleep();
+        RgBody.MoveRotation(0);
     }
 
     public void TeleportBall(Vector2 position)
     {
-        _rgBody.MovePosition(position);
+        RgBody.MovePosition(position);
     }
 
     public void ResetBall()
     {
         StopBall();
         TeleportBall(Vector2.zero);
-        StartCoroutine(ShootBallAfterOneSecond());
     }
 
     private IEnumerator ShootBallAfterOneSecond()

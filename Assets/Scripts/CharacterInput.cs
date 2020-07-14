@@ -8,29 +8,33 @@ public class CharacterInput : MonoBehaviour
     [SerializeField] private PlayerController playerController;
 
     [SerializeField] private BallFire ballFire;
-    
-    private PlayerInputActions _inputActions;
 
+    [SerializeField] private InputActionAsset actionAsset;
+
+    [SerializeField] private string actionMapName;
+
+    private InputActionMap _inputActionMap;
+    
     private IEnumerator _powerCoroutine;
 
     private IEnumerator _angleCoroutine;
 
     private void Awake()
     {
-        _inputActions = new PlayerInputActions();
-        _inputActions.Player.Movement.performed += OnMovement;
-        _inputActions.Player.Shoot.performed += OnShoot;
-        _inputActions.Player.PowerAndDirection.performed += OnPowerAndDirection;
+        _inputActionMap = actionAsset.FindActionMap(actionMapName, true);
+        _inputActionMap["Movement"].performed += OnMovement;
+        _inputActionMap["Shoot"].performed += OnShoot;
+        _inputActionMap["PowerAndDirection"].performed += OnPowerAndDirection;
     }
 
     private void OnEnable()
     {
-        _inputActions.Player.Enable();
+        _inputActionMap.Enable();
     }
 
     private void OnDisable()
     {
-        _inputActions.Player.Disable();
+        _inputActionMap.Disable();
     }
 
     private void OnMovement(InputAction.CallbackContext context)
